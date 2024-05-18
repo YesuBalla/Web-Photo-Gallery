@@ -1,7 +1,8 @@
 import {Component} from 'react' 
+import { createApi } from 'unsplash-js'
+import { ShimmerSimpleGallery } from "react-shimmer-effects"
 
 import { CiSearch } from "react-icons/ci"
-
 import TabItem from '../TabItem'
 import ImageItem from '../ImageItem'
 
@@ -14,13 +15,16 @@ const tabsList = [
     {tabId: 'CITIES', displayText: 'Cities'}
 ]
 
-
+const unsplash = createApi({
+    accessKey: '4tV8dNpCbJWU3H5kztmso-oltwYqhjlNUxyUhdwE6Pk',
+  });
 
 class WebGallery extends Component {
     state = {
-        searchInput: '',
+        searchInput: tabsList[0].tabId,
         activeTabId: tabsList[0].tabId,
-        imagesData: []
+        imagesData: [],
+        isLoading: true,
     }
 
     componentDidMount() {
@@ -29,27 +33,24 @@ class WebGallery extends Component {
 
     getImagesData = async() => {
         const {searchInput} = this.state
-        const url = `https://api.unsplash.com/photos?query=${searchInput}>;`
-        const options = {
-            headers: {
-                Authorization: 'Client-ID 4tV8dNpCbJWU3H5kztmso-oltwYqhjlNUxyUhdwE6Pk',
-            },
-            method: 'GET'
-        }
-        const response = await fetch(url, options)
-        const data = await response.json()
-        const updatedData = data.map((eachItem) => ({
+        const responseData = await unsplash.search.getCollections({
+            query: `${searchInput}`,
+            page: 1,
+            perPage: 10,
+          });
+        const updatedData = responseData.response.results.map((eachItem) => ({
             id: eachItem.id,
-            thumbnailUrl: eachItem.urls.thumb,
-            altDescription: eachItem.alt_description,
-            fullImageUrl: eachItem.urls.full,
+            title: eachItem.title,
+            thumbnailUrl: eachItem.cover_photo.urls.thumb,
+            fullImageUrl: eachItem.cover_photo.urls.full,
         }))
 
-        this.setState({imagesData: updatedData})
+        this.setState({imagesData: updatedData, isLoading: false})
+
     }
 
     setActiveTabId = (tabId) => {
-        this.setState({activeTabId: tabId})
+        this.setState({activeTabId: tabId, searchInput: tabId, isLoading: true}, this.getImagesData)
     } 
 
     onChangeSearchInput = event => {
@@ -61,13 +62,15 @@ class WebGallery extends Component {
     }
 
     render() {
-        const {searchInput, activeTabId, imagesData} = this.state
+        const {activeTabId, imagesData, isLoading} = this.state
         return (
+            
+
             <div className='app-container'>
                 <div className='web-gallery'>
                     <h1 className='heading'>Web Gallery</h1>
                     <div className='search-input-container'>
-                        <input type='search' placeholder='Search' className='search-input' value={searchInput} onChange={this.onChangeSearchInput} />
+                        <input type='search' placeholder='Search' className='search-input' onChange={this.onChangeSearchInput} />
                         <button type='button' onClick={this.getSearchResults} className='search-button'>
                             <CiSearch size={25} />
                         </button>
@@ -75,6 +78,7 @@ class WebGallery extends Component {
                     <ul className='tabs-list'>
                         {tabsList.map((eachTab) => (<TabItem key={eachTab.tabId} tabDetails={eachTab} setActiveTabId={this.setActiveTabId} isActive={eachTab.tabId === activeTabId} />))}
                     </ul>
+                    {isLoading && <ShimmerSimpleGallery card imageHeight={190}  />}
                     <ul className='images-list'>
                         {imagesData.map((eachItem) => (<ImageItem key={eachItem.id} imageDetails={eachItem} />))}
                     </ul>
